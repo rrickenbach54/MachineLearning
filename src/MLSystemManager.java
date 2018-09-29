@@ -17,8 +17,8 @@ public class MLSystemManager {
     public SupervisedLearner getLearner(String model, Random rand) throws Exception
     {
         if (model.equals("baseline")) return new BaselineLearner();
-        else if (model.equals("perceptron")) return new Perceptron(rand);
-            // else if (model.equals("neuralnet")) return new NeuralNet(rand);
+        //else if (model.equals("perceptron")) return new Perceptron(rand);
+        else if (model.equals("neuralnet")) return new NeuralNet(rand);
             // else if (model.equals("decisiontree")) return new DecisionTree();
             // else if (model.equals("knn")) return new InstanceBasedLearner();
         else throw new Exception("Unrecognized model: " + model);
@@ -29,7 +29,7 @@ public class MLSystemManager {
         //args = new String[]{"-L", "baseline", "-A", "data/iris.arff", "-E", "cross", "10", "-N"};
 
         //Random rand = new Random(1234); // Use a seed for deterministic results (makes debugging easier)
-        Random rand = new Random(); // No seed for non-deterministic results
+        Random rand = new Random(1234); // No seed for non-deterministic results
 
         //Parse the command line arguments
         ArgParser parser = new ArgParser(args);
