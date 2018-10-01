@@ -20,10 +20,10 @@ public class NeuralNet extends SupervisedLearner {
     private int inputNodes;
     private int hiddenNodes;
     private int outputNodes;
-    private double learningRate = 1;
-    private double weightInitialize = 1.0; //Sets weights to be this value set to -1 to randomly generate value.
+    private double learningRate = 0.1;
+    private double weightInitialize = -1.0; //Sets weights to be this value set to -1 to randomly generate value.
     private int hiddenLayerScaleSize = 2;
-    private int epochs = 1;
+    private int epochs = 10000;
     double bias = 1.0;
 
 
@@ -35,7 +35,7 @@ public class NeuralNet extends SupervisedLearner {
         createWeights();
         initializeWeights();
         //printStructure(features);
-        for (int i = 0; i < 10000; i++) {
+        for (int i = 0; i < epochs; i++) {
             travelGradient(features, labels);
             //printStructure(features);
             features.shuffle(new Random(), labels);
@@ -123,56 +123,57 @@ public class NeuralNet extends SupervisedLearner {
         }
     }
 
-    private void printStructure(Matrix features) {
-        //Print input layer
-        for (int i = 0; i < inputLayer.length; i++) {
-            if (i == inputLayer.length - 1) {
-                System.out.print("  [" + i + "]   Value: " + bias);
-            } else {
-                System.out.print("  [" + i + "]   Value: " + features.get(0, i));
-            }
-        }
-        System.out.println();
-
-        //Print weights be sent from input to hidden layer
-        for (int i = 0; i < inputLayer.length; i++) {
-            for (int j = 0; j < hiddenLayer.length - 1; j++) {
-                System.out.print("[" + i + "][" + j + "] Value: " + inputToHiddenWeights[i][j] + " ");
-            }
-            System.out.print("  |   ");
-        }
-        System.out.println();
-        System.out.println();
-
-        //Print hidden layer
-        for (int i = 0; i < hiddenLayer.length; i++) {
-            if (i == hiddenLayer.length - 1) {
-                System.out.print("  [" + i + "]   Value: " + bias);
-            } else {
-                System.out.print("  [" + i + "]   Value: " + calculateHiddenOutput(features, i));
-            }
-
-        }
-        System.out.println();
-
-        //Print weights being sent from hidden to output layer
-        for (int i = 0; i < hiddenLayer.length; i++) {
-            for (int j = 0; j < outputLayer.length; j++) {
-                System.out.print(" [" + i + "][" + j + "] Value: " + hiddenToOutputWeights[i][j]);
-            }
-            System.out.print("  |   ");
-        }
-        System.out.println();
-        System.out.println();
-
-        //Print output layer
-        for (int i = 0; i < outputLayer.length; i++) {
-            System.out.print("  [" + i + "]  Value: " + calculateOutput(i));
-        }
-        System.out.println();
-        System.out.println();
-
-    }
+    //Method that was used in the begging to see how all the network is structured left in can be useful for debugging.
+//    private void printStructure(Matrix features) {
+//        //Print input layer
+//        for (int i = 0; i < inputLayer.length; i++) {
+//            if (i == inputLayer.length - 1) {
+//                System.out.print("  [" + i + "]   Value: " + bias);
+//            } else {
+//                System.out.print("  [" + i + "]   Value: " + features.get(0, i));
+//            }
+//        }
+//        System.out.println();
+//
+//        //Print weights be sent from input to hidden layer
+//        for (int i = 0; i < inputLayer.length; i++) {
+//            for (int j = 0; j < hiddenLayer.length - 1; j++) {
+//                System.out.print("[" + i + "][" + j + "] Value: " + inputToHiddenWeights[i][j] + " ");
+//            }
+//            System.out.print("  |   ");
+//        }
+//        System.out.println();
+//        System.out.println();
+//
+//        //Print hidden layer
+//        for (int i = 0; i < hiddenLayer.length; i++) {
+//            if (i == hiddenLayer.length - 1) {
+//                System.out.print("  [" + i + "]   Value: " + bias);
+//            } else {
+//                System.out.print("  [" + i + "]   Value: " + calculateHiddenOutput(features, i));
+//            }
+//
+//        }
+//        System.out.println();
+//
+//        //Print weights being sent from hidden to output layer
+//        for (int i = 0; i < hiddenLayer.length; i++) {
+//            for (int j = 0; j < outputLayer.length; j++) {
+//                System.out.print(" [" + i + "][" + j + "] Value: " + hiddenToOutputWeights[i][j]);
+//            }
+//            System.out.print("  |   ");
+//        }
+//        System.out.println();
+//        System.out.println();
+//
+//        //Print output layer
+//        for (int i = 0; i < outputLayer.length; i++) {
+//            System.out.print("  [" + i + "]  Value: " + calculateOutput(i));
+//        }
+//        System.out.println();
+//        System.out.println();
+//
+//    }
 
     private double calculateOutput(int index) {
         double sum = 0;
@@ -181,7 +182,7 @@ public class NeuralNet extends SupervisedLearner {
         }
         double output = ((1) / (1 + Math.exp(-sum)));//Sigmoid function
         outputLayer[index] = output;
-        return sum;
+        return output;
     }
 
     private double calculateHiddenOutput(Matrix features, int index) {
