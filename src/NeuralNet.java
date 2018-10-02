@@ -1,4 +1,3 @@
-import java.util.Arrays;
 import java.util.Random;
 
 public class NeuralNet extends SupervisedLearner
@@ -24,45 +23,37 @@ public class NeuralNet extends SupervisedLearner
     private int inputNodes;
     private int hiddenNodes;
     private int outputNodes;
-    private double learningRate = 0.1;
-    private double weightInitialize = -1; //Sets weights to be this value set to -1 to randomly generate value.
-    private int hiddenLayerScaleSize = 2;
-    private int maxEpochs = 10000;
     private int epochs = 1;
-    double bias = 1.0;
+    private double bias = 1.0;
     private boolean validate = true;
     private boolean continueTraining = true;
     private double validationAccuracy = 0;
     private double previousValidationAccuracy = 0;
     private double maxAccuracy = 0;
     private int runsWithoutImprovement = 0;
-    private double momentum =0.9;
 
 
-    public void train(Matrix features, Matrix labels) throws Exception
+    public void train(Matrix features, Matrix labels)
     {
         this.inputNodes = features.cols() + 1;
-        this.hiddenNodes = hiddenLayerScaleSize * inputNodes;//sets the initial hidden layer to be twice the size of input.
+        double hiddenLayerScaleSize = 2;
+        this.hiddenNodes = (int)(hiddenLayerScaleSize * inputNodes);//sets the initial hidden layer to be twice the size of input.
         this.outputNodes = labels.valueCount(0);
         createLayers();
         createWeights();
         initializeWeights();
         //printStructure(features);
-//        while(epochs<maxEpochs)
-//        {
-//            feedForward(features, labels);
-//            //printStructure(features);
-//            //features.shuffle(new Random(), labels);
-//            epochs++;
-//        }
 
-
+        //Max Epochs the program can run, rarely hits this point but is there just in case.
+        int maxEpochs = 10000;
         while (epochs < maxEpochs && continueTraining)
         {
 
             feedForward(features, labels);
             //printStructure(features);
             calculateAccuracy(features, labels);
+
+            //Checks the validation set accuracy and contains the criteria for stop training
             if (validate)
             {
                 calculateValidationAccuracy(features, labels);
@@ -72,8 +63,13 @@ public class NeuralNet extends SupervisedLearner
                     runsWithoutImprovement = 0;
                     if (validationAccuracy > maxAccuracy)
                     {
+                        //Store the best weights
                         storeWeights();
                         maxAccuracy = validationAccuracy;
+                        if(validationAccuracy ==100)
+                        {
+                            continueTraining=false;
+                        }
                     }
                 } else
                 {
@@ -84,13 +80,14 @@ public class NeuralNet extends SupervisedLearner
                         continueTraining = false;
                     }
                 }
-                System.out.println("Validation Set Accuracy " + validationAccuracy);
+                //System.out.println("Validation Set Accuracy " + validationAccuracy);
             }
             features.shuffle(new Random(), labels);
             epochs++;
         }
         if (validationAccuracy < maxAccuracy)
         {
+            //Restore weights to best validation set accuracy
             restoreWeights();
             validationAccuracy = maxAccuracy;
         }
@@ -100,54 +97,49 @@ public class NeuralNet extends SupervisedLearner
 
     }
 
+    //Function to restore weights
     private void restoreWeights()
     {
         //Restore Input to Hidden Weights
         for (int i = 0; i < inputLayer.length; i++)
         {
-            for (int j = 0; j < hiddenLayer.length - 1; j++)
-            {
-                inputToHiddenWeights[i][j] = inputToHiddenWeightsStored[i][j];
-            }
+            if (hiddenLayer.length - 1 >= 0)
+                System.arraycopy(inputToHiddenWeightsStored[i], 0, inputToHiddenWeights[i], 0, hiddenLayer.length - 1);
         }
 
         //Restore hidden to output layer weights
         for (int i = 0; i < hiddenLayer.length; i++)
         {
-            for (int j = 0; j < outputLayer.length; j++)
-            {
-                hiddenToOutputWeights[i][j] = hiddenToOutputWeightsStored[i][j];
-            }
+            System.arraycopy(hiddenToOutputWeightsStored[i], 0, hiddenToOutputWeights[i], 0, outputLayer.length);
         }
     }
 
+    //Store best accuracy weights
     private void storeWeights()
     {
         //Store Input to Hidden Weights
         for (int i = 0; i < inputLayer.length; i++)
         {
-            for (int j = 0; j < hiddenLayer.length - 1; j++)
-            {
-                inputToHiddenWeightsStored[i][j] = inputToHiddenWeights[i][j];
-            }
+            if (hiddenLayer.length - 1 >= 0)
+                System.arraycopy(inputToHiddenWeights[i], 0, inputToHiddenWeightsStored[i], 0, hiddenLayer.length - 1);
         }
 
         //Store hidden to output layer weights
         for (int i = 0; i < hiddenLayer.length; i++)
         {
-            for (int j = 0; j < outputLayer.length; j++)
-            {
-                hiddenToOutputWeightsStored[i][j] = hiddenToOutputWeights[i][j];
-            }
+            System.arraycopy(hiddenToOutputWeights[i], 0, hiddenToOutputWeightsStored[i], 0, outputLayer.length);
         }
     }
 
 
+    //Feed forward function
+    //Populates the neural net then calls back prop for updating
+    //If using validation set it just uses the first 75% of features
     private void feedForward(Matrix features, Matrix labels)
     {
         if (validate)
         {
-            for (int i = 0; i < (int) (.75 * features.rows()); i++)
+            for (int i = 0; i < (int) (.75 * features.rows()+1); i++)
             {
                 populateInputArray(features, i);
                 for (int j = 0; j < hiddenLayer.length; j++)
@@ -157,16 +149,16 @@ public class NeuralNet extends SupervisedLearner
                         hiddenLayer[j] = bias;
                     } else
                     {
-                        calculateHiddenOutput(features, j);
+                        calculateHiddenOutput(j);
                     }
                 }
                 for (int k = 0; k < outputLayer.length; k++)
                 {
                     calculateOutput(k);
                 }
-                backprop(features, labels, i);
+                backprop(labels, i);
             }
-        } else if (!validate)
+        } else
         {
             for (int i = 0; i < features.rows(); i++)
             {
@@ -178,21 +170,22 @@ public class NeuralNet extends SupervisedLearner
                         hiddenLayer[j] = bias;
                     } else
                     {
-                        calculateHiddenOutput(features, j);
+                        calculateHiddenOutput(j);
                     }
                 }
                 for (int k = 0; k < outputLayer.length; k++)
                 {
                     calculateOutput(k);
                 }
-                backprop(features, labels, i);
+                backprop(labels, i);
             }
         }
     }
 
+    //Method used for calculating training accuracy without validation
     private void calculateAccuracy(Matrix features, Matrix labels)
     {
-        int numCorrect = 0;
+        int numCorrect =0;
         for (int i = 0; i < features.rows(); i++)
         {
             populateInputArray(features, i);
@@ -203,7 +196,7 @@ public class NeuralNet extends SupervisedLearner
                     hiddenLayer[j] = bias;
                 } else
                 {
-                    calculateHiddenOutput(features, j);
+                    calculateHiddenOutput(j);
                 }
             }
             for (int k = 0; k < outputLayer.length; k++)
@@ -212,14 +205,16 @@ public class NeuralNet extends SupervisedLearner
             }
             numCorrect += calculateOutputAccuracy(labels, i);
         }
-        //System.out.print(100-((double)numCorrect/(double)features.rows()*100)+",");
+        //System.out.print(1-((double)numCorrect/(double)features.rows())+",");
         //System.out.println("Epoch: " + epochs + " Acurracy: " + numCorrect + " Out of: " + features.rows() + " Percent: " + ((double)numCorrect/(double)features.rows()*100));
     }
 
+    //Calculates validation accuracy
     private void calculateValidationAccuracy(Matrix features, Matrix labels)
     {
         int numCorrect = 0;
-        for (int i = (int) (.75 * features.rows() + 1); i < features.rows(); i++)
+        //System.out.println("Validation Starts at " + (int) (.75 * features.rows()));
+        for (int i = (int) (.75 * features.rows()); i < features.rows(); i++)
         {
             populateInputArray(features, i);
             for (int j = 0; j < hiddenLayer.length; j++)
@@ -229,7 +224,7 @@ public class NeuralNet extends SupervisedLearner
                     hiddenLayer[j] = bias;
                 } else
                 {
-                    calculateHiddenOutput(features, j);
+                    calculateHiddenOutput(j);
                 }
             }
             for (int k = 0; k < outputLayer.length; k++)
@@ -238,7 +233,10 @@ public class NeuralNet extends SupervisedLearner
             }
             numCorrect += calculateOutputAccuracy(labels, i);
         }
-        validationAccuracy = 100 * ((double) numCorrect / (double) ((features.rows() - (int) (.75 * features.rows()))));
+        //System.out.print(1-((double)numCorrect/(double)features.rows())+",");
+        //System.out.println("Validation Set Size: " + (double) ((features.rows() - (int) (.75 * features.rows()))) + " Number Correct " + numCorrect);
+        validationAccuracy = ((double) numCorrect / (double) ((features.rows() - (int) (.75 * features.rows()))));
+        //System.out.print(1-validationAccuracy+",");
     }
 
     private int calculateOutputAccuracy(Matrix labels, int index)
@@ -264,7 +262,8 @@ public class NeuralNet extends SupervisedLearner
     }
 
 
-    private void backprop(Matrix features, Matrix labels, int index)
+    //Backpropagation function
+    private void backprop(Matrix labels, int index)
     {
 
         //Calculate Output Error
@@ -290,13 +289,17 @@ public class NeuralNet extends SupervisedLearner
         }
 
         //Calculate Hidden to Output Layer Weight Change
+        double momentum = 0.3;
+
+        //Learning rate set to 0.05 was the best functionality in testing
+        double learningRate = 0.05;
         for (int i = 0; i < hiddenLayer.length; i++)
         {
             for (int j = 0; j < outputLayer.length; j++)
             {
 
                 double temp = hiddenToOutputWeightsChange[i][j];
-                hiddenToOutputWeightsChange[i][j] = ((learningRate * (outputLayerError[j]) * hiddenLayer[i]) + momentum*temp); //MOMENTUM
+                hiddenToOutputWeightsChange[i][j] = ((learningRate * (outputLayerError[j]) * hiddenLayer[i]) + momentum *temp); //MOMENTUM
                 //System.out.println("Weight Change [" +i+"]["+j+"]: " + hiddenToOutputWeightsChange[i][j]);
             }
         }
@@ -319,7 +322,7 @@ public class NeuralNet extends SupervisedLearner
             for (int j = 0; j < hiddenLayer.length - 1; j++)
             {
                 double temp = inputToHiddenWeightsChange[i][j];
-                inputToHiddenWeightsChange[i][j] = ((learningRate * hiddenLayerError[j] * inputLayer[i])+ momentum*temp); //MOMENTUM
+                inputToHiddenWeightsChange[i][j] = ((learningRate * hiddenLayerError[j] * inputLayer[i])+ momentum *temp); //MOMENTUM
                 //System.out.println("Changing weight [" +i +"][" +j +"] by: " + (learningRate*hiddenLayerError[j]*inputLayer[i]));
             }
         }
@@ -397,7 +400,8 @@ public class NeuralNet extends SupervisedLearner
 //
 //    }
 
-    private double calculateOutput(int index)
+    //Utility method used in feed forward to calculate output nodes
+    private void calculateOutput(int index)
     {
         double sum = 0;
         for (int i = 0; i < hiddenLayer.length; i++)
@@ -406,10 +410,11 @@ public class NeuralNet extends SupervisedLearner
         }
         double output = ((1) / (1 + Math.exp(-sum)));//Sigmoid function
         outputLayer[index] = output;
-        return output;
+        //return output;
     }
 
-    private double calculateHiddenOutput(Matrix features, int index)
+    //Utility method used in feed forward to calculate hidden nodes
+    private void calculateHiddenOutput(int index)
     {
         double sum = 0;
         for (int i = 0; i < inputLayer.length; i++)
@@ -419,10 +424,11 @@ public class NeuralNet extends SupervisedLearner
         }
         double output = ((1) / (1 + Math.exp(-sum))); //Sigmoid function
         hiddenLayer[index] = output;
-        return output;
+        //return output;
 
     }
 
+    //Utility method to feed in feature set into input array
     private void populateInputArray(Matrix features, int index)
     {
         for (int i = 0; i < inputLayer.length; i++)
@@ -438,8 +444,12 @@ public class NeuralNet extends SupervisedLearner
     }
 
 
+    //Initialize weights if not set to 0 or greater then randomly set values between -0.5 & 0.5
     private void initializeWeights()
     {
+        //Sets weights to be this value set to -1 to randomly generate value.
+        //Set to 0 or above to set all weights to that number
+        double weightInitialize = -1;
         if (weightInitialize >= 0)
         {
             //Initialize input to hidden layer weights to be a specified value
@@ -486,10 +496,10 @@ public class NeuralNet extends SupervisedLearner
     {
         Random generator = new Random();
         int range = generator.nextInt(500 + 1 - 100) - 100;
-        double rand = (double) range / 1000;
-        return rand;
+        return (double) range / 1000;
     }
 
+    //Creates the weight arrays to specified sizes
     private void createWeights()
     {
         inputToHiddenWeights = new double[inputLayer.length][hiddenLayer.length - 1];
@@ -501,6 +511,7 @@ public class NeuralNet extends SupervisedLearner
 
     }
 
+    //Creates the nodes of specified sizes
     private void createLayers()
     {
         //Initializes the arrays to be the correct size based on the inputs and specifications
@@ -511,7 +522,8 @@ public class NeuralNet extends SupervisedLearner
         outputLayerError = new double[outputNodes];//Array for holding the errors of output nodes
     }
 
-    public void predict(double[] features, double[] labels) throws Exception
+    //Predict function called by supervised learner.
+    public void predict(double[] features, double[] labels)
     {
         //Populate the input layer with bias from features array
         for (int i = 0; i < features.length + 1; i++)
@@ -529,46 +541,24 @@ public class NeuralNet extends SupervisedLearner
         for (int i = 0; i < hiddenLayer.length - 1; i++)
         {
             double hiddenSum = 0.0;
-            for (int j = 0; j < inputLayer.length; j++)
-            {
-                if (j == inputLayer.length - 1)
-                {
-                    hiddenSum += inputLayer[j] * inputToHiddenWeights[j][i];
-                    double hiddenOutput = ((1) / (1 + Math.exp(-hiddenSum))); //Sigmoid function
-                    hiddenLayer[i] = hiddenOutput;
-                } else
-                {
-                    hiddenSum += inputLayer[j] * inputToHiddenWeights[j][i];
-                }
-            }
+            calculateNodes(i, hiddenSum, inputLayer, inputToHiddenWeights, hiddenLayer);
         }
 
         //Calculate Output Nodes
         for (int i = 0; i < outputLayer.length; i++)
         {
             double outputSum = 0.0;
-            for (int j = 0; j < hiddenLayer.length; j++)
-            {
-                if (j == hiddenLayer.length - 1)
-                {
-                    outputSum += hiddenLayer[j] * hiddenToOutputWeights[j][i];
-                    double output = ((1) / (1 + Math.exp(-outputSum))); //Sigmoid function
-                    outputLayer[i] = output;
-                } else
-                {
-                    outputSum += hiddenLayer[j] * hiddenToOutputWeights[j][i];
-                }
-            }
+            calculateNodes(i, outputSum, hiddenLayer, hiddenToOutputWeights, outputLayer);
         }
 
         //Give final output
         double largestValue = -10.0;
-        for (int i = 0; i < outputLayer.length; i++)
+        for (double anOutputLayer : outputLayer)
         {
 
-            if (outputLayer[i] > largestValue)
+            if (anOutputLayer > largestValue)
             {
-                largestValue = outputLayer[i];
+                largestValue = anOutputLayer;
             }
         }
         for (int i = 0; i < outputLayer.length; i++)
@@ -579,5 +569,22 @@ public class NeuralNet extends SupervisedLearner
             }
         }
 
+    }
+
+    //Utility method used in predict to do feed forward.
+    private void calculateNodes(int i, double hiddenSum, double[] inputLayer, double[][] inputToHiddenWeights, double[] hiddenLayer)
+    {
+        for (int j = 0; j < inputLayer.length; j++)
+        {
+            if (j == inputLayer.length - 1)
+            {
+                hiddenSum += inputLayer[j] * inputToHiddenWeights[j][i];
+                double hiddenOutput = ((1) / (1 + Math.exp(-hiddenSum))); //Sigmoid function
+                hiddenLayer[i] = hiddenOutput;
+            } else
+            {
+                hiddenSum += inputLayer[j] * inputToHiddenWeights[j][i];
+            }
+        }
     }
 }
