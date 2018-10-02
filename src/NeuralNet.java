@@ -296,7 +296,7 @@ public class NeuralNet extends SupervisedLearner
             {
 
                 double temp = hiddenToOutputWeightsChange[i][j];
-                hiddenToOutputWeightsChange[i][j] = ((learningRate * (outputLayerError[j]) * hiddenLayer[i]) + momentum*temp);
+                hiddenToOutputWeightsChange[i][j] = ((learningRate * (outputLayerError[j]) * hiddenLayer[i]) + momentum*temp); //MOMENTUM
                 //System.out.println("Weight Change [" +i+"]["+j+"]: " + hiddenToOutputWeightsChange[i][j]);
             }
         }
@@ -319,7 +319,7 @@ public class NeuralNet extends SupervisedLearner
             for (int j = 0; j < hiddenLayer.length - 1; j++)
             {
                 double temp = inputToHiddenWeightsChange[i][j];
-                inputToHiddenWeightsChange[i][j] = ((learningRate * hiddenLayerError[j] * inputLayer[i])+ momentum*temp);
+                inputToHiddenWeightsChange[i][j] = ((learningRate * hiddenLayerError[j] * inputLayer[i])+ momentum*temp); //MOMENTUM
                 //System.out.println("Changing weight [" +i +"][" +j +"] by: " + (learningRate*hiddenLayerError[j]*inputLayer[i]));
             }
         }
