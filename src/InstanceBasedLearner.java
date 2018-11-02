@@ -27,7 +27,6 @@ public class InstanceBasedLearner extends SupervisedLearner
         }
         featuresMatrix = features;
         labelsMatrix = labels;
-
     }
 
     private void populateOutput(int valueCount)
@@ -72,7 +71,6 @@ public class InstanceBasedLearner extends SupervisedLearner
                     largestSmall = kSmallest[k];
                     index = k;
                 }
-
             }
             if (distance < largestSmall)
             {
@@ -153,11 +151,8 @@ public class InstanceBasedLearner extends SupervisedLearner
 
                 //Predict
                 labels[0] = predict;
-
             }
-
         }
-
 
         //Calculate regression output
         if (regression)
@@ -166,7 +161,6 @@ public class InstanceBasedLearner extends SupervisedLearner
             double denominator = 0;
             if (weighted)
             {
-
                 for (double aKSmallest : kSmallest)
                 {
                     double distanceSquared = Math.pow(aKSmallest, 2);
@@ -184,13 +178,12 @@ public class InstanceBasedLearner extends SupervisedLearner
                         numerator += (1 / distanceSquared) * labelsMatrix.get(knn[i], 0);
                     }
                 }
-                if(denominator!=0)
+                if (denominator != 0)
                 {
                     regressionOutput = numerator / denominator;
-                }
-                else
+                } else
                 {
-                    regressionOutput=0;
+                    regressionOutput = 0;
                 }
             } else
             {
