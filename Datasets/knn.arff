@@ -1,0 +1,27 @@
+% 1. Title: Ryan Rickenbach Linear Sepearable
+%
+% 2. Sources:
+%      (a)Voting.arff and Iris.arff as templates for this file
+%
+%
+%
+% 3. Number of Instances: 8 (4 in each of three classes)
+%
+% 4. Number of Attributes: 2 numeric, predictive attributes and the class
+%
+% 5. Attribute Information:
+%    1. Input 1 (x)
+%    2. Input 2 (y)
+%    3. Class, 0 & 1
+%
+
+@RELATION hw
+
+@ATTRIBUTE x Continuous
+@ATTRIBUTE y Continuous
+@ATTRIBUTE class 	{A,B}
+@data
+0.3,0.8,A
+-0.3,1.6,B
+0.9,0,B
+1,1,A

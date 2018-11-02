@@ -1,0 +1,15 @@
+@relation burgorz
+@attribute 'Meat' {'n', 'y'}
+@attribute 'Crust' {'deep', 'stuffed','thin'}
+@attribute 'Veg' {'n', 'y'}
+@attribute 'Class' {'bad' ,'good', 'great'}
+@data
+'y','thin','n','great'
+'n','deep','n','bad'
+'n','stuffed','y','good'
+'y','stuffed','y','great'
+'y','deep','n','good'
+'y','deep','y','great'
+'n','thin','y','good'
+'y','deep','n','good'
+'n','thin','n','bad'

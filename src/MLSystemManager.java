@@ -17,10 +17,10 @@ public class MLSystemManager {
     public SupervisedLearner getLearner(String model, Random rand) throws Exception
     {
         if (model.equals("baseline")) return new BaselineLearner();
-        //else if (model.equals("perceptron")) return new Perceptron(rand);
+        else if (model.equals("perceptron")) return new Perceptron(rand);
         else if (model.equals("neuralnet")) return new NeuralNet(rand);
-            // else if (model.equals("decisiontree")) return new DecisionTree();
-            // else if (model.equals("knn")) return new InstanceBasedLearner();
+        else if (model.equals("decisiontree")) return new DecisionTree();
+        else if (model.equals("knn")) return new InstanceBasedLearner();
         else throw new Exception("Unrecognized model: " + model);
     }
 
@@ -64,7 +64,7 @@ public class MLSystemManager {
         if (evalMethod.equals("training"))
         {
             System.out.println("Calculating accuracy on training set...");
-            data.shuffle(rand);
+            //data.shuffle(rand);
             Matrix features = new Matrix(data, 0, 0, data.rows(), data.cols() - 1);
             Matrix labels = new Matrix(data, 0, data.cols() - 1, data.rows(), 1);
             Matrix confusion = new Matrix();

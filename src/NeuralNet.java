@@ -33,6 +33,7 @@ public class NeuralNet extends SupervisedLearner
     private int runsWithoutImprovement = 0;
 
 
+
     public void train(Matrix features, Matrix labels)
     {
         this.inputNodes = features.cols() + 1;
@@ -75,7 +76,7 @@ public class NeuralNet extends SupervisedLearner
                 {
                     runsWithoutImprovement++;
                     previousValidationAccuracy = validationAccuracy;
-                    if (runsWithoutImprovement >= 5)
+                    if (runsWithoutImprovement >= 7)
                     {
                         continueTraining = false;
                     }
@@ -96,6 +97,7 @@ public class NeuralNet extends SupervisedLearner
         System.out.println("Final Validation Accuracy: " + validationAccuracy);
 
     }
+
 
     //Function to restore weights
     private void restoreWeights()
@@ -206,7 +208,7 @@ public class NeuralNet extends SupervisedLearner
             numCorrect += calculateOutputAccuracy(labels, i);
         }
         //System.out.print(1-((double)numCorrect/(double)features.rows())+",");
-        //System.out.println("Epoch: " + epochs + " Acurracy: " + numCorrect + " Out of: " + features.rows() + " Percent: " + ((double)numCorrect/(double)features.rows()*100));
+        //System.out.println("Epoch: " + epochs + " Accuracy: " + numCorrect + " Out of: " + features.rows() + " Percent: " + ((double)numCorrect/(double)features.rows()*100));
     }
 
     //Calculates validation accuracy
