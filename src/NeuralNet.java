@@ -19,7 +19,6 @@ public class NeuralNet extends SupervisedLearner
     private double[][] hiddenToOutputWeightsStored;
     private double[][] hiddenToOutputWeightsChange;
 
-
     private int inputNodes;
     private int hiddenNodes;
     private int outputNodes;
