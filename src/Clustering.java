@@ -6,24 +6,32 @@ import java.util.List;
 
 class Clustering
 {
-    private int kMeans = 5;
+    private int kMeans = 2;
     private double[][] distances;
     private int[] clusters;
     private Matrix centroids;
     private HashMap<Integer, List<Integer>> map = new HashMap<Integer, List<Integer>>();
-    boolean run = true;
-    double SSE = 0;
-    double previousSSE = 0;
-    int runCount = 0;
+    private boolean run = true;
+    private double SSE = 0;
+    private double previousSSE = 0;
+    private int runCount = 0;
+    private StringBuilder sseCSV = new StringBuilder();
 
-    DecimalFormat df = new DecimalFormat("#.###");
+    private DecimalFormat df = new DecimalFormat("#.###");
 
-
-    //TODO implement SSE and then completed.
-    public void train(Matrix features) throws Exception
+    void train(Matrix features)
     {
-        df.setRoundingMode(RoundingMode.CEILING); //Used for rounding in strings for printing values
+        /**
+         * Matrix Modification Lines
+         *
+         *
+         */
         //features = new Matrix(features, 0, 1, features.rows(), features.cols() - 1); //Only used for labor data comment out if not testing on labor data.
+        //features = new Matrix(features, 0, 0, features.rows(), features.cols() - 1); //Only used for IRIS data
+
+        //Used for rounding in strings for printing values
+        df.setRoundingMode(RoundingMode.CEILING);
+
         //Initialize memory
         intitializeArrays(features.rows());
 
@@ -44,9 +52,7 @@ class Clustering
 
             if(runCount > 2)
             {
-                previousSSE = Math.round(previousSSE);
-                SSE = Math.round(SSE);
-                if(previousSSE == SSE)
+                if(Math.abs(previousSSE -SSE) < 0.001)
                 {
                     run = false;
                 }
@@ -57,20 +63,22 @@ class Clustering
             runCount++;
         }
         System.out.println("SSE has converged stopping program");
+        System.out.println("SSE CSV:");
+        System.out.println(sseCSV);
     }
 
     //Bulk of the program calculate the new centroid of cluster.
     private void calculateNewCentroid(Matrix features)
     {
         //Create list if does not exist else clear
-        for (int i = 0; i < clusters.length; i++)
+        for (int cluster : clusters)
         {
-            if (map.get(clusters[i]) == null)
+            if (map.get(cluster) == null)
             {
-                map.put(clusters[i], new ArrayList<Integer>());
+                map.put(cluster, new ArrayList<Integer>());
             } else
             {
-                map.get(clusters[i]).clear();
+                map.get(cluster).clear();
             }
         }
 
@@ -123,6 +131,7 @@ class Clustering
             }
         }
         System.out.println("SSE: " + SSE);
+        sseCSV.append(SSE +",");
         System.out.println();
         System.out.println("Calculating new Centroid");
         //Calculate New Centroid
@@ -140,8 +149,6 @@ class Clustering
                 //Iterate through each item in centroids
                 for (int k = 0; k < map.get(i).size(); k++)
                 {
-                    int row = map.get(i).get(k);
-                    int value = j;
                     if (features.valueCount(j) == 0)
                     {
                         if (features.get((map.get(i).get(k)), j) != Matrix.MISSING)
@@ -189,7 +196,7 @@ class Clustering
     {
         for (int i = 0; i < map.size(); i++)
         {
-            System.out.println("Cluster " + i + ": " + map.get(i));
+            System.out.println("Cluster " + i + ": Size: "+map.get(i).size() + map.get(i));
         }
     }
 
@@ -252,26 +259,26 @@ class Clustering
     {
         for (int i = 0; i < centroids.rows(); i++)
         {
-            String data = "";
+            StringBuilder data = new StringBuilder();
             for (int j = 0; j < centroids.cols(); j++)
             {
                 if (j == centroids.cols() - 1)
                 {
                     if (centroids.get(i, j) == Matrix.MISSING)
                     {
-                        data += "?";
+                        data.append("?");
                     } else
                     {
-                        data += df.format(centroids.get(i, j));
+                        data.append(df.format(centroids.get(i, j)));
                     }
                 } else
                 {
                     if (centroids.get(i, j) == Matrix.MISSING)
                     {
-                        data += "? , ";
+                        data.append("? , ");
                     } else
                     {
-                        data += df.format(centroids.get(i, j)) + ", ";
+                        data.append(df.format(centroids.get(i, j))).append(", ");
                     }
                 }
             }
