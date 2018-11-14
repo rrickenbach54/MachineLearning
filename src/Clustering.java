@@ -14,7 +14,7 @@ public class Clustering
     //TODO implement SSE and then completed.
     public void train(Matrix features) throws Exception
     {
-        //features = new Matrix(features,0,1,features.rows(),features.cols()-1);
+        features = new Matrix(features,0,1,features.rows(),features.cols()-1);
         //Initialize memory
         intitializeArrays(features.rows());
 
@@ -22,7 +22,7 @@ public class Clustering
         initializeCentroids(features);
         printCentroids();
 
-        for(int i=0;i<10;i++)
+        for(int i=0;i<2;i++)
         {
             //Calculate Distances
             calculateDistances(features);
@@ -56,10 +56,51 @@ public class Clustering
         {
             map.get(clusters[i]).add(i);
         }
+        System.out.println();
         System.out.println("Current Clusters: ");
         printMap();
+        System.out.println();
         System.out.println("Calculating new Centroid");
 
+        double SSE =0;
+        for (int i = 0; i < features.rows(); i++)
+        {
+            for (int j = 0; j < features.cols(); j++)
+            {
+                if(features.valueCount(j) == 0)
+                {
+                    if(features.get(i,j) == Matrix.MISSING || centroids.get(clusters[i],j) == Matrix.MISSING)
+                    {
+                        SSE += 1;
+                    }
+                    else
+                    {
+                        SSE += Math.pow((features.get(i, j) - centroids.get(clusters[i], j)), 2);
+                    }
+                }
+                else
+                {
+                    if(features.get(i,j) == Matrix.MISSING || centroids.get(clusters[i],j) == Matrix.MISSING)
+                    {
+                        SSE += 1;
+                    }
+                    else
+                    {
+                        if(features.get(i,j) == centroids.get(clusters[i],j))
+                        {
+                            SSE +=0;
+                        }
+                        else
+                        {
+                            SSE +=1;
+                        }
+                    }
+                }
+
+            }
+        }
+
+        //Calculate New Centroid
         //Iterate through each centroid
         for(int i =0;i<map.size();i++)
         {
@@ -67,28 +108,58 @@ public class Clustering
             for(int j=0;j<features.cols();j++)
             {
                 double mean =0;
+                int size =0;
+                boolean nominal =false;
                 //Iterate through each item in centroids
                 for (int k = 0; k < map.get(i).size(); k++)
                 {
-                    mean += features.get((map.get(i).get(k)),j);
+                    if(features.valueCount(j) == 0)
+                    {
+                        if(features.get((map.get(i).get(k)), j)!= Matrix.MISSING)
+                        {
+                            mean += features.get((map.get(i).get(k)), j);
+                            size ++;
+                        }
+                    }
+                    else if(features.valueCount((j)) !=0)
+                    {
+                        nominal = true;
+                        int [] mostCommonValue = new int[features.valueCount(j)];
+                        for(int s =0; s<mostCommonValue.length;s++)
+                        {
+                            if(features.get((map.get(i).get(k)),j) != Matrix.MISSING)
+                            {
+                                mostCommonValue[(int) features.get((map.get(i).get(k)), j)]++;
+                            }
+                        }
+                        int largest =0;
+                        for(int s =0; s<mostCommonValue.length;s++)
+                        {
+                            if(mostCommonValue[s]>largest)
+                            {
+                                largest = mostCommonValue[s];
+                                mean = s;
+                            }
+                        }
+                    }
                 }
-                mean=mean/map.get(i).size();
-                centroids.set(i,j,mean);
-            }
-            System.out.println(i + ": New Centroid");
-            for(int l=0;l<centroids.cols();l++)
-            {
-                if(l==centroids.cols()-1)
+                if(!nominal)
                 {
-                    System.out.print(centroids.get(i,l));
+                    mean = mean / size;
+                }
+                if(Double.isNaN(mean))
+                {
+                    centroids.set(i,j,Matrix.MISSING);
                 }
                 else
                 {
-                    System.out.print(centroids.get(i,l) +", ");
+                    centroids.set(i, j, mean);
                 }
+
             }
-            System.out.println();
         }
+        printCentroids();
+        System.out.println("SSE: " + SSE);
     }
 
     private void printMap()
@@ -170,7 +241,6 @@ public class Clustering
 
     private void printCentroids()
     {
-
         for(int i=0; i<centroids.rows();i++)
         {
             String data = "";
@@ -178,11 +248,25 @@ public class Clustering
             {
                 if(j==centroids.cols()-1)
                 {
-                    data += centroids.get(i,j);
+                    if(centroids.get(i,j) == Matrix.MISSING)
+                    {
+                        data += "?";
+                    }
+                    else
+                    {
+                        data += centroids.get(i, j);
+                    }
                 }
                 else
                 {
-                    data += centroids.get(i, j) + ", ";
+                    if(centroids.get(i,j) == Matrix.MISSING)
+                    {
+                        data += "? , ";
+                    }
+                    else
+                    {
+                        data += centroids.get(i, j) + ", ";
+                    }
                 }
             }
             System.out.println("Centroid " + i + ": " + data);
