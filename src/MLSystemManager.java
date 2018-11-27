@@ -8,7 +8,9 @@ import java.util.ArrayList;
 import java.util.Random;
 import java.io.File;
 
+//./MLSystemManager -L [LearningAlgorithm] -A [ARFF_File] -E training
 
+@SuppressWarnings("ALL")
 public class MLSystemManager {
 
     /**
@@ -19,6 +21,8 @@ public class MLSystemManager {
         if (model.equals("baseline")) return new BaselineLearner();
         else if (model.equals("perceptron")) return new Perceptron(rand);
         else if (model.equals("neuralnet")) return new NeuralNet(rand);
+            //Number after rand determines total layers in the neuralNetwork
+        else if (model.equals("mlp")) return new MLP();
         else if (model.equals("decisiontree")) return new DecisionTree();
         else if (model.equals("knn")) return new InstanceBasedLearner();
         else throw new Exception("Unrecognized model: " + model);
@@ -82,7 +86,7 @@ public class MLSystemManager {
             if (evalMethod.equals("training"))
             {
                 System.out.println("Calculating accuracy on training set...");
-                //data.shuffle(rand);
+                data.shuffle(rand);
                 Matrix features = new Matrix(data, 0, 0, data.rows(), data.cols() - 1);
                 Matrix labels = new Matrix(data, 0, data.cols() - 1, data.rows(), 1);
                 Matrix confusion = new Matrix();
