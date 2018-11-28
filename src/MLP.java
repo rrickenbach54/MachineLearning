@@ -31,9 +31,8 @@ public class MLP extends SupervisedLearner
     private nLayer Layer[];
     private Matrix globalFeatures;
     private Matrix globalLabels;
-    double expectedOutput;
 
-    private int numberOfLayers = 21;
+    private int numberOfLayers = 4;
 
     public MLP()
     {
@@ -41,8 +40,7 @@ public class MLP extends SupervisedLearner
     }
 
 
-    @Override
-    public void train(Matrix inputFeatures, Matrix inputLabels) throws Exception
+    public void train(Matrix inputFeatures, Matrix inputLabels)
     {
         //Make the Matrix global for usage in other methods as needed without passing them.
         globalFeatures = inputFeatures;
@@ -53,45 +51,158 @@ public class MLP extends SupervisedLearner
         double hiddenLayerScale = 2;
         hiddenLayerSize = (int) hiddenLayerScale * inputLayerSize;
         outputLayerSize = globalLabels.valueCount(0);
+
         //Initialized Memory and build the hidden layers
         createLayers();
         intializeWeights();
-        for (int i = 0; i < 100; i++)
+
+        while(epochs < maxEpochs && continueTraining)
         {
-            for (int j = 0; j < globalFeatures.rows(); j++)
+            if(validate)
             {
-                populateInputLayer(j);
-                feedForward();
-                double expectedOutput = inputLabels.get(j,0);
-                backprop(expectedOutput);
-//                System.out.println("Debug Line");
+                for (int i = 0; i < (int)(.75*globalFeatures.rows()+1); i++)
+                {
+                    populateInputLayer(i);
+                    feedForward();
+                    backprop(globalLabels.get(i,0));
+                }
+            }
+            else
+            {
+                for (int i = 0; i < globalFeatures.rows(); i++)
+                {
+                    populateInputLayer(i);
+                    feedForward();
+                    backprop(globalLabels.get(i, 0));
+                }
+            }
+
+            if(validate)
+            {
+                calculateValidationAccuracy();
+                if ((validationAccuracy - previousValidationAccuracy) > 0.01)
+                {
+                    previousValidationAccuracy = validationAccuracy;
+                    runsWithoutImprovement = 0;
+                    if (validationAccuracy > maxAccuracy)
+                    {
+                        //Store the best weights
+                        storeWeights();
+                        maxAccuracy = validationAccuracy;
+                        if(validationAccuracy ==100)
+                        {
+                            continueTraining=false;
+                        }
+                    }
+                } else
+                {
+                    runsWithoutImprovement++;
+                    previousValidationAccuracy = validationAccuracy;
+                    if (runsWithoutImprovement >= 7)
+                    {
+                        continueTraining = false;
+                    }
+                }
             }
             globalFeatures.shuffle(new Random(), globalLabels);
+            epochs++;
         }
-        //      this.features.shuffle(new Random(), this.labels);
-        //       System.out.println("Debug Line");
+        if (validationAccuracy < maxAccuracy)
+        {
+            //Restore weights to best validation set accuracy
+            restoreWeights();
+            validationAccuracy = maxAccuracy;
+        }
+        System.out.println("Training Completed");
+        System.out.println("Total Epochs: " + epochs);
+        System.out.println("Final Validation Accuracy: " + validationAccuracy);
+
+
+    }
+
+    private void restoreWeights()
+    {
+        //Restore best weights
+        for (int i = 0; i < Layer.length-1; i++)
+        {
+            for (int j = 0; j < Layer[i].weight.length; j++)
+            {
+                for (int k = 0; k < Layer[i].weight[0].length; k++)
+                {
+                    Layer[i].weight[j][k] = Layer[i].weightStored[j][k];
+                }
+            }
+        }
+    }
+
+    private void storeWeights()
+    {
+        //Store Weights
+        for (int i = 0; i < Layer.length-1; i++)
+        {
+            for (int j = 0; j < Layer[i].weight.length; j++)
+            {
+                for (int k = 0; k < Layer[i].weight[0].length; k++)
+                {
+                    Layer[i].weightStored[j][k] = Layer[i].weight[j][k];
+                }
+            }
+        }
+    }
+
+    private void calculateValidationAccuracy()
+    {
+        int numCorrect =0;
+        for (int i = (int)(.75 * globalFeatures.rows()); i < globalFeatures.rows(); i++)
+        {
+            populateInputLayer(i);
+            feedForward();
+            numCorrect += calculateOutputAccuracy(globalLabels.get(i,0));
+        }
+        validationAccuracy = ((double)numCorrect/(double)((globalFeatures.rows() - (int)(.75 * globalFeatures.rows()))));
+    }
+
+    private int calculateOutputAccuracy(double target)
+    {
+        double highestValue = Double.MIN_VALUE;
+        double output =-1;
+        for (int i = 0; i < Layer[Layer.length-1].size; i++)
+        {
+            if(Layer[Layer.length-1].output[i] > highestValue)
+            {
+                highestValue = Layer[Layer.length-1].output[i];
+                output = i;
+            }
+        }
+        if(target == output)
+        {
+            return 1;
+        }
+        else
+        {
+            return 0;
+        }
     }
 
     private void feedForward()
     {
-        for (int i = 0; i < Layer.length-1; i++)
+        for (int i = 0; i < Layer.length - 1; i++)
         {
             //Output Layer
             if (i == Layer.length - 2)
             {
-                for (int j = 0; j < Layer[i+1].size; j++)
+                for (int j = 0; j < Layer[i + 1].size; j++)
                 {
                     double outputSum = 0;
                     for (int k = 0; k < Layer[i].size; k++)
                     {
                         outputSum += Layer[i].output[k] * Layer[i].weight[k][j];
                     }
-                    Layer[i+1].output[j] = sigmoid(outputSum);
+                    Layer[i + 1].output[j] = sigmoid(outputSum);
                 }
-            }
-            else
+            } else
             {
-                for (int j = 0; j < Layer[i+1].size; j++)
+                for (int j = 0; j < Layer[i + 1].size; j++)
                 {
                     if (j == Layer[i + 1].size - 1)
                     {
@@ -108,100 +219,67 @@ public class MLP extends SupervisedLearner
                 }
             }
         }
-
-//        //Loop through all layers
-//        for (int i = 1; i < Layer.length; i++)
-//        {
-//            //Output Layer
-//            if (i == Layer.length - 1)
-//            {
-//
-//                for (int j = 0; j < Layer[i].size; j++)
-//                {
-//                    double outputSum = 0;
-//                    for (int k = 0; k < Layer[i - 1].size; k++)
-//                    {
-//                        outputSum += Layer[i - 1].output[k] * Layer[i - 1].weight[k][j];
-//                    }
-//                    Layer[i].output[j] = sigmoid(outputSum);
-//                }
-//            } else
-//            {
-//                for (int j = 0; j < Layer[j].size-1; j++)
-//                {
-//                    double sum =0;
-//                    for (int k = 0; k < Layer[i-1].size; k++)
-//                    {
-//                        sum += Layer[i-1].output[k] * Layer[i-1].weight[k][j];
-//                    }
-//                    Layer[i].output[j] = sigmoid(sum);
-//                }
-//            }
-//        }
     }
 
     private void backprop(double target)
     {
 
         //Calculate Output Error
-        for (int i = 0; i < Layer[Layer.length-1].size; i++)
+        for (int i = 0; i < Layer[Layer.length - 1].size; i++)
         {
-            if( (double)i == target)
+            if ((double) i == target)
             {
-                Layer[Layer.length-1].error[i] = ((1-Layer[Layer.length-1].output[i]) * (Layer[Layer.length-1].output[i]) * (1-Layer[Layer.length-1].output[i]));
-            }
-            else
+                Layer[Layer.length - 1].error[i] = ((1 - Layer[Layer.length - 1].output[i]) * (Layer[Layer.length - 1].output[i]) * (1 - Layer[Layer.length - 1].output[i]));
+            } else
             {
-                Layer[Layer.length-1].error[i] = ((0-Layer[Layer.length-1].output[i]) * (Layer[Layer.length-1].output[i]) * (1-Layer[Layer.length-1].output[i]));
+                Layer[Layer.length - 1].error[i] = ((0 - Layer[Layer.length - 1].output[i]) * (Layer[Layer.length - 1].output[i]) * (1 - Layer[Layer.length - 1].output[i]));
             }
         }
 
         //Calculate Hidden to Output Layer Weight Change
-        double momentum = 0.3;
-
-        for (int i = 0; i < Layer[numberOfLayers -2].size; i++)
+        for (int i = 0; i < Layer[numberOfLayers - 2].size; i++)
         {
-            for (int j = 0; j < Layer[numberOfLayers-1].size; j++)
+            for (int j = 0; j < Layer[numberOfLayers - 1].size; j++)
             {
-                double temp = Layer[numberOfLayers -2].weightChange[i][j];
-                Layer[numberOfLayers-2].weightChange[i][j] = ((learningRate * (Layer[numberOfLayers-1].error[j]) * Layer[numberOfLayers-2].output[i]) + (momentum*temp));
+                double temp = Layer[numberOfLayers - 2].weightChange[i][j];
+                Layer[numberOfLayers - 2].weightChange[i][j] = ((learningRate * (Layer[numberOfLayers - 1].error[j]) * Layer[numberOfLayers - 2].output[i]) + (momentum * temp));
             }
         }
 
         //Calculate Hidden Layer to Output Error
-        for (int i = 0; i < Layer[numberOfLayers-2].size -1 ; i++)
+        for (int i = 0; i < Layer[numberOfLayers - 2].size - 1; i++)
         {
-            double sum =0;
-            for (int j = 0; j < Layer[numberOfLayers-1].size; j++)
+            double sum = 0;
+            for (int j = 0; j < Layer[numberOfLayers - 1].size; j++)
             {
-                sum += (Layer[numberOfLayers-1].error[j] * Layer[numberOfLayers-2].weight[i][j]);
+                sum += (Layer[numberOfLayers - 1].error[j] * Layer[numberOfLayers - 2].weight[i][j]);
             }
-            Layer[numberOfLayers-2].error[i] = ((Layer[numberOfLayers-2].output[i]) * (1-Layer[numberOfLayers-2].output[i]) * sum);
+            Layer[numberOfLayers - 2].error[i] = ((Layer[numberOfLayers - 2].output[i]) * (1 - Layer[numberOfLayers - 2].output[i]) * sum);
         }
 
         //Calculate Hidden Layer to Hidden Layer error
-        for (int i = Layer.length-3; i > 0 ; i--)
+        for (int i = Layer.length - 3; i > 0; i--)
         {
-            for (int j = 0; j < Layer[i].size-1; j++)
+            for (int j = 0; j < Layer[i].size - 1; j++)
             {
-                double sum =0;
-                for (int k = 0; k < Layer[i+1].size-1; k++)
+                double sum = 0;
+                for (int k = 0; k < Layer[i + 1].size - 1; k++)
                 {
-                    sum += (Layer[i+1].error[k] * Layer[i].weight[j][k]);
+                    sum += (Layer[i + 1].error[k] * Layer[i].weight[j][k]);
                 }
-                Layer[i].error[j] = ((Layer[i].output[j]) * (1-Layer[i].output[j])*sum);
+                Layer[i].error[j] = ((Layer[i].output[j]) * (1 - Layer[i].output[j]) * sum);
             }
         }
 
         //Calculate Hidden Layer to Hidden Layer Weight Change
-        for (int i = 1; i < Layer.length-2 ; i++)
+        for (int i = 1; i < Layer.length - 2; i++)
         {
             for (int j = 0; j < Layer[i].size; j++)
             {
-                for (int k = 0; k < Layer[i+1].size-1; k++)
+                for (int k = 0; k < Layer[i + 1].size - 1; k++)
                 {
                     double temp = Layer[i].weightChange[j][k];
-                    Layer[i].weightChange[j][k] = ((learningRate * Layer[i+1].error[k] * Layer[i].output[j]) + momentum*temp);
+                    Layer[i].weightChange[j][k] = ((learningRate * Layer[i + 1].error[k] * Layer[i].output[j]) + momentum * temp);
                 }
             }
         }
@@ -209,15 +287,15 @@ public class MLP extends SupervisedLearner
         //Calculate input to hidden weight changes
         for (int i = 0; i < Layer[0].size; i++)
         {
-            for (int j = 0; j < Layer[1].size-1; j++)
+            for (int j = 0; j < Layer[1].size - 1; j++)
             {
                 double temp = Layer[0].weightChange[i][j];
-                Layer[0].weightChange[i][j] = ((learningRate * Layer[1].error[j] * Layer[0].output[i]) + momentum*temp);
+                Layer[0].weightChange[i][j] = ((learningRate * Layer[1].error[j] * Layer[0].output[i]) + momentum * temp);
             }
         }
 
         //Change all weights
-        for (int i = 0; i < Layer.length-1; i++)
+        for (int i = 0; i < Layer.length - 1; i++)
         {
             for (int j = 0; j < Layer[i].weight.length; j++)
             {
@@ -227,105 +305,6 @@ public class MLP extends SupervisedLearner
                 }
             }
         }
-    }
-
-    private void changeWeights()
-    {
-        //TODO implement Momentum
-        //Calculate the weight change but does not change it yet
-        for (int i = Layer.length - 2; i >= 0; i--)
-        {
-            for (int j = 0; j < Layer[i].size; j++)
-            {
-                for (int k = 0; k < Layer[i + 1].size; k++)
-                {
-                    //Last hidden layer to output layer
-                    if (i == Layer.length - 2)
-                    {
-                        Layer[i].weightChange[j][k] = ((learningRate) * (Layer[i + 1].error[k]) * (Layer[i].output[j]));
-                    }
-                    //Hidden to hidden and input to hidden layers
-                    if (i != Layer.length - 2 && k != Layer[i + 1].size - 1)
-                    {
-                        Layer[i].weightChange[j][k] = ((learningRate) * (Layer[i + 1].error[k]) * (Layer[i].output[j]));
-                    }
-
-                }
-            }
-        }
-
-        //Change weights
-        for (int i = 0; i < Layer.length; i++)
-        {
-            if (i != Layer.length - 1)
-            {
-                for (int j = 0; j < Layer[i].size; j++)
-                {
-                    for (int k = 0; k < Layer[i + 1].size; k++)
-                    {
-                        if (k != Layer[i + 1].size - 1)
-                        {
-                            Layer[i].weight[j][k] += Layer[i].weightChange[j][k];
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    private void calculateError(double target)
-    {
-
-
-//        //Calculate Error from output to input
-//        for (int i = Layer.length - 1; i > 0; i--)
-//        {
-//            //Output Layer
-//            if (i == Layer.length - 1)
-//            {
-//                for (int j = 0; j < Layer[i].size; j++)
-//                {
-//                    //If target then output is 1 else 0
-//                    if ((double) (j) == target)
-//                    {
-//                        Layer[i].error[j] = ((1 - Layer[i].output[j]) * (Layer[i].output[j]) * (1 - Layer[i].output[j]));
-//                    } else
-//                    {
-//                        Layer[i].error[j] = ((0 - Layer[i].output[j]) * (Layer[i].output[j]) * (1 - Layer[i].output[j]));
-//                    }
-//                }
-//            }
-//            //Last hidden layer to output layer only separate as this layer has a connection to all nodes in next layer where as input to hidden and hidden to hidden
-//            //do not have a connection to last node as it is bias node.
-//            else if (i == Layer.length - 2)
-//            {
-//                for (int j = 0; j < Layer[i].size - 1; j++)
-//                {
-//                    double sum = 0;
-//                    for (int k = 0; k < Layer[i + 1].size; k++)
-//                    {
-//                        sum += Layer[i + 1].error[k] * Layer[i].weight[j][k];
-//                    }
-//                    Layer[i].error[j] = ((Layer[i].output[j]) * (1 - Layer[i].output[j]) * sum);
-//                }
-//            } else
-//            {
-//                for (int j = 0; j < Layer[i].size - 1; j++)
-//                {
-//                    double sum = 0;
-//                    for (int k = 0; k < hiddenLayerSize -1; k++)
-//                    {
-//                        //TODO this is causing problems currently fix.
-//                        if (k != Layer[i + 1].size - 1)
-//                        {
-//                            sum += Layer[i + 1].error[k] * Layer[i].weight[j][k];
-//                        }
-//                    }
-//                    Layer[i].error[j] = ((Layer[i].output[j]) * (1 - Layer[i].output[j]) * sum);
-//                }
-//            }
-//        }
-
     }
 
     private double sigmoid(double sum)
@@ -431,8 +410,8 @@ public class MLP extends SupervisedLearner
     {
         Random generator = new Random();
         int range = generator.nextInt(500 + 1 - 100) - 100;
-        //return (double) range / 1000;
-        return 0.1;
+        return (double) range / 1000;
+        //return 0.1;
     }
 
     @Override
