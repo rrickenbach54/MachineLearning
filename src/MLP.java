@@ -34,7 +34,7 @@ public class MLP extends SupervisedLearner
 
     private int numberOfLayers = 4;
 
-    public MLP()
+    MLP()
     {
         super();
     }
@@ -56,7 +56,7 @@ public class MLP extends SupervisedLearner
         createLayers();
         intializeWeights();
 
-        while (epochs < maxEpochs && continueTraining)
+        while ((epochs < maxEpochs) && continueTraining)
         {
             if (validate)
             {
@@ -126,10 +126,8 @@ public class MLP extends SupervisedLearner
         {
             for (int j = 0; j < Layer[i].weight.length; j++)
             {
-                for (int k = 0; k < Layer[i].weight[0].length; k++)
-                {
-                    Layer[i].weight[j][k] = Layer[i].weightStored[j][k];
-                }
+                if (Layer[i].weight[0].length >= 0)
+                    System.arraycopy(Layer[i].weightStored[j], 0, Layer[i].weight[j], 0, Layer[i].weight[0].length);
             }
         }
     }
@@ -141,10 +139,8 @@ public class MLP extends SupervisedLearner
         {
             for (int j = 0; j < Layer[i].weight.length; j++)
             {
-                for (int k = 0; k < Layer[i].weight[0].length; k++)
-                {
-                    Layer[i].weightStored[j][k] = Layer[i].weight[j][k];
-                }
+                if (Layer[i].weight[0].length >= 0)
+                    System.arraycopy(Layer[i].weight[j], 0, Layer[i].weightStored[j], 0, Layer[i].weight[0].length);
             }
         }
     }
@@ -411,8 +407,7 @@ public class MLP extends SupervisedLearner
         return (double) range / 1000;
     }
 
-    @Override
-    public void predict(double[] features, double[] labels) throws Exception
+    public void predict(double[] features, double[] labels)
     {
         populateInputLayer(features);
         feedForward();
