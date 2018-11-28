@@ -56,18 +56,17 @@ public class MLP extends SupervisedLearner
         createLayers();
         intializeWeights();
 
-        while(epochs < maxEpochs && continueTraining)
+        while (epochs < maxEpochs && continueTraining)
         {
-            if(validate)
+            if (validate)
             {
-                for (int i = 0; i < (int)(.75*globalFeatures.rows()+1); i++)
+                for (int i = 0; i < (int) (.75 * globalFeatures.rows() + 1); i++)
                 {
                     populateInputLayer(i);
                     feedForward();
-                    backprop(globalLabels.get(i,0));
+                    backprop(globalLabels.get(i, 0));
                 }
-            }
-            else
+            } else
             {
                 for (int i = 0; i < globalFeatures.rows(); i++)
                 {
@@ -77,7 +76,7 @@ public class MLP extends SupervisedLearner
                 }
             }
 
-            if(validate)
+            if (validate)
             {
                 calculateValidationAccuracy();
                 if ((validationAccuracy - previousValidationAccuracy) > 0.01)
@@ -89,9 +88,9 @@ public class MLP extends SupervisedLearner
                         //Store the best weights
                         storeWeights();
                         maxAccuracy = validationAccuracy;
-                        if(validationAccuracy ==100)
+                        if (validationAccuracy == 100)
                         {
-                            continueTraining=false;
+                            continueTraining = false;
                         }
                     }
                 } else
@@ -123,7 +122,7 @@ public class MLP extends SupervisedLearner
     private void restoreWeights()
     {
         //Restore best weights
-        for (int i = 0; i < Layer.length-1; i++)
+        for (int i = 0; i < Layer.length - 1; i++)
         {
             for (int j = 0; j < Layer[i].weight.length; j++)
             {
@@ -138,7 +137,7 @@ public class MLP extends SupervisedLearner
     private void storeWeights()
     {
         //Store Weights
-        for (int i = 0; i < Layer.length-1; i++)
+        for (int i = 0; i < Layer.length - 1; i++)
         {
             for (int j = 0; j < Layer[i].weight.length; j++)
             {
@@ -152,33 +151,32 @@ public class MLP extends SupervisedLearner
 
     private void calculateValidationAccuracy()
     {
-        int numCorrect =0;
-        for (int i = (int)(.75 * globalFeatures.rows()); i < globalFeatures.rows(); i++)
+        int numCorrect = 0;
+        for (int i = (int) (.75 * globalFeatures.rows()); i < globalFeatures.rows(); i++)
         {
             populateInputLayer(i);
             feedForward();
-            numCorrect += calculateOutputAccuracy(globalLabels.get(i,0));
+            numCorrect += calculateOutputAccuracy(globalLabels.get(i, 0));
         }
-        validationAccuracy = ((double)numCorrect/(double)((globalFeatures.rows() - (int)(.75 * globalFeatures.rows()))));
+        validationAccuracy = ((double) numCorrect / (double) ((globalFeatures.rows() - (int) (.75 * globalFeatures.rows()))));
     }
 
     private int calculateOutputAccuracy(double target)
     {
         double highestValue = Double.MIN_VALUE;
-        double output =-1;
-        for (int i = 0; i < Layer[Layer.length-1].size; i++)
+        double output = -1;
+        for (int i = 0; i < Layer[Layer.length - 1].size; i++)
         {
-            if(Layer[Layer.length-1].output[i] > highestValue)
+            if (Layer[Layer.length - 1].output[i] > highestValue)
             {
-                highestValue = Layer[Layer.length-1].output[i];
+                highestValue = Layer[Layer.length - 1].output[i];
                 output = i;
             }
         }
-        if(target == output)
+        if (target == output)
         {
             return 1;
-        }
-        else
+        } else
         {
             return 0;
         }
@@ -411,7 +409,6 @@ public class MLP extends SupervisedLearner
         Random generator = new Random();
         int range = generator.nextInt(500 + 1 - 100) - 100;
         return (double) range / 1000;
-        //return 0.1;
     }
 
     @Override
@@ -438,6 +435,4 @@ public class MLP extends SupervisedLearner
             }
         }
     }
-
-
 }
